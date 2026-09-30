@@ -1,724 +1,427 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>スマートPOS レジシステム</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome (Icons) -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js for visualization -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-        /* Custom scrollbar for better mobile UX */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POS App - レジアプリ</title>
+  <!-- Tailwind CSS (UIデザイン用) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js (売上グラフ用) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+<body class="bg-gray-100 min-h-screen text-gray-800">
 
-    <!-- 全体ローディング画面 -->
-    <div id="app-loading" class="fixed inset-0 bg-slate-900 bg-opacity-70 z-50 flex flex-col justify-center items-center text-white transition-opacity duration-300">
-        <div class="animate-spin rounded-full h-14 w-14 border-4 border-indigo-500 border-t-transparent mb-4"></div>
-        <p class="text-lg font-medium">システムを読み込み中...</p>
+  <!-- 1. 未ログイン状態の画面 (ログイン画面) -->
+  <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md text-center space-y-6">
+      <h1 class="text-2xl font-bold text-gray-900">POS レジアプリ</h1>
+      <p class="text-sm text-gray-600">ご利用には Google アカウントでのログインが必要です。</p>
+      <button id="login-btn" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg shadow-sm hover:bg-gray-50 font-medium transition">
+        <svg class="w-5 h-5" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        Google アカウントでログイン
+      </button>
     </div>
+  </div>
 
-    <!-- 1. 未ログイン画面（ログインプロンプト） -->
-    <div id="auth-screen" class="hidden min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
-        <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 max-w-md w-full text-center border border-white/20">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full mb-6 shadow-inner">
-                <i class="fa-solid font-bold fa-cash-register text-4xl"></i>
-            </div>
-            <h1 class="text-3xl font-extrabold text-slate-800 mb-2">スマート POS</h1>
-            <p class="text-slate-500 mb-8 text-sm">売上データの保存・集計・分析をシンプルに。</p>
-            
-            <div class="space-y-4">
-                <button id="btn-login" class="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3.5 px-4 border border-slate-300 rounded-xl shadow-sm transition duration-200 active:scale-95">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                    </svg>
-                    Google アカウントでログイン
-                </button>
-            </div>
+  <!-- 2. ログイン完了後のメイン画面 -->
+  <div id="app-screen" class="hidden min-h-screen flex flex-col">
+    <!-- ヘッダー -->
+    <header class="bg-indigo-600 text-white p-4 shadow-md flex justify-between items-center">
+      <h1 class="text-xl font-bold">POS App</h1>
+      <div class="flex items-center gap-3">
+        <span id="user-display-name" class="text-sm font-medium hidden sm:inline"></span>
+        <button id="logout-btn" class="bg-indigo-700 hover:bg-indigo-800 text-xs sm:text-sm px-3 py-1.5 rounded transition">
+          ログアウト
+        </button>
+      </div>
+    </header>
 
-            <!-- Firebase 設定エラー・注意事項の表示領域 -->
-            <div id="firebase-config-notice" class="mt-8 text-left text-xs bg-amber-50 text-amber-800 p-3 rounded-lg border border-amber-200 hidden">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i>
-                <b>Firebase設定が必要です:</b> HTMLファイル内の `firebaseConfig` をご自身のプロジェクト設定に更新してください。
+    <!-- メインコンテンツ -->
+    <main class="flex-1 p-4 max-w-5xl mx-auto w-full space-y-6">
+      
+      <!-- 入力エラーメッセージの表示領域 -->
+      <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm"></div>
+
+      <!-- 登録フォーム -->
+      <section class="bg-white p-5 rounded-xl shadow-sm space-y-4">
+        <h2 class="text-lg font-bold border-b pb-2 text-gray-700">商品登録</h2>
+        <form id="pos-form" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">日付</label>
+            <input type="date" id="input-date" class="w-full border rounded p-2 text-sm" required>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">商品名</label>
+            <input type="text" id="input-name" placeholder="例: リンゴ" class="w-full border rounded p-2 text-sm" required>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">単価 (円)</label>
+            <input type="number" id="input-price" min="0" placeholder="150" class="w-full border rounded p-2 text-sm" required>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">個数</label>
+            <input type="number" id="input-quantity" min="1" placeholder="2" class="w-full border rounded p-2 text-sm" required>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">カテゴリ</label>
+            <input type="text" id="input-category" placeholder="例: 食品" class="w-full border rounded p-2 text-sm" required>
+          </div>
+          
+          <!-- 自動計算表示＆登録ボタン -->
+          <div class="md:col-span-5 flex flex-col sm:flex-row justify-between items-center bg-gray-50 p-3 rounded mt-2 gap-3">
+            <div class="text-gray-700 font-semibold">
+              小計: <span id="auto-total" class="text-xl text-indigo-600 font-bold">0</span> 円
             </div>
+            <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-8 rounded shadow transition">
+              登録
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 日付ごとの合計金額集計 & グラフ表示 -->
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- 売上集計カード -->
+        <div class="bg-white p-5 rounded-xl shadow-sm space-y-2 flex flex-col justify-center">
+          <h3 class="text-xs font-semibold text-gray-400 uppercase">総合計売上</h3>
+          <p id="total-sales" class="text-3xl font-extrabold text-indigo-600">0 円</p>
+          <div id="daily-summary" class="text-xs text-gray-500 space-y-1 max-h-32 overflow-y-auto pt-2 border-t">
+            <!-- 日別売上がここに挿入されます -->
+          </div>
         </div>
-    </div>
 
-    <!-- 2. ログイン後メイン画面 -->
-    <div id="main-screen" class="hidden flex-1 flex flex-col">
-        <!-- ナビゲーションバー -->
-        <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-30">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-cash-register text-2xl"></i>
-                    <span class="font-bold text-lg tracking-wide hidden sm:inline">スマート POS</span>
-                </div>
-                
-                <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2">
-                        <img id="user-avatar" src="" alt="User Avatar" class="w-8 h-8 rounded-full border-2 border-indigo-200 hidden">
-                        <span id="user-display-name" class="text-sm font-medium truncate max-w-[120px] sm:max-w-xs">ユーザー</span>
-                    </div>
-                    <button id="btn-logout" class="bg-indigo-700 hover:bg-indigo-800 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition flex items-center gap-1.5 border border-indigo-500">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span class="hidden sm:inline">ログアウト</span>
-                    </button>
-                </div>
-            </div>
-        </header>
+        <!-- 売上グラフ -->
+        <div class="bg-white p-5 rounded-xl shadow-sm md:col-span-2">
+          <h3 class="text-sm font-bold text-gray-600 mb-2">日別売上推移</h3>
+          <div class="h-40">
+            <canvas id="sales-chart"></canvas>
+          </div>
+        </div>
+      </section>
 
-        <!-- メインコンテンツ -->
-        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-            
-            <!-- 上段: 登録フォーム と 集計カード -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                <!-- 登録/編集フォーム (2カラム分) -->
-                <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
-                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-                        <h2 id="form-title" class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-cart-plus text-indigo-600"></i>
-                            伝票登録
-                        </h2>
-                        <button id="btn-cancel-edit" class="hidden text-xs text-rose-600 hover:underline flex items-center gap-1">
-                            <i class="fa-solid fa-xmark"></i> 編集を取り消す
-                        </button>
-                    </div>
+      <!-- 絞り込み検索 & 登録データ一覧 -->
+      <section class="bg-white p-5 rounded-xl shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-3">
+          <h2 class="text-lg font-bold text-gray-700">登録履歴 (自分の記録)</h2>
+          <input type="text" id="search-input" placeholder="商品名で絞り込み..." class="border rounded px-3 py-1.5 text-sm w-full sm:w-64">
+        </div>
 
-                    <!-- バリデーションエラーメッセージ -->
-                    <div id="form-error" class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl flex items-center gap-2">
-                        <i class="fa-solid fa-circle-exclamation text-rose-500 flex-shrink-0"></i>
-                        <span id="form-error-msg">入力内容をご確認ください。</span>
-                    </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 text-gray-600">
+              <tr>
+                <th class="p-3">日付</th>
+                <th class="p-3">商品名</th>
+                <th class="p-3">カテゴリ</th>
+                <th class="p-3 text-right">単価</th>
+                <th class="p-3 text-right">個数</th>
+                <th class="p-3 text-right">合計</th>
+                <th class="p-3 text-center">操作</th>
+              </tr>
+            </thead>
+            <tbody id="records-list" class="divide-y">
+              <!-- Firestoreから取得したデータがここに動的表示されます -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
 
-                    <form id="pos-form" class="space-y-4" onsubmit="return false;">
-                        <input type="hidden" id="edit-doc-id" value="">
+  <!-- Firebase SDK の読み込み (v10 互換モジュール) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getAuth, 
+      GoogleAuthProvider, 
+      signInWithPopup, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { 
+      getFirestore, 
+      collection, 
+      addDoc, 
+      deleteDoc, 
+      doc, 
+      onSnapshot, 
+      query, 
+      where, 
+      orderBy,
+      serverTimestamp 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-                        <!-- 5項目入力欄 -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <!-- 1. 日付 -->
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                                    日付 <span class="text-rose-500">*</span>
-                                </label>
-                                <input type="date" id="input-date" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-800 text-sm outline-none transition">
-                            </div>
+    // --- Firebase 設定 (ご提示いただいたキーを使用) ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCAtfJp9Yj65bpmx3Qppv8__TRoStT1kpE",
+      authDomain: "posapp-d3f89.firebaseapp.com",
+      projectId: "posapp-d3f89",
+      storageBucket: "posapp-d3f89.firebasestorage.app",
+      messagingSenderId: "159737280029",
+      appId: "1:159737280029:web:d4ccdc7cb4dd669a5fb8f4"
+    };
 
-                            <!-- 2. 商品名 -->
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                                    商品名 <span class="text-rose-500">*</span>
-                                </label>
-                                <input type="text" id="input-item" placeholder="例: コーヒー, ケーキ" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-800 text-sm outline-none transition">
-                            </div>
+    // Firebase 初期化
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
 
-                            <!-- 3. 単価 -->
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                                    単価 (円) <span class="text-rose-500">*</span>
-                                </label>
-                                <input type="number" id="input-price" min="0" placeholder="例: 450" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-800 text-sm outline-none transition">
-                            </div>
+    // DOM 要素
+    const loginScreen = document.getElementById('login-screen');
+    const appScreen = document.getElementById('app-screen');
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userDisplayName = document.getElementById('user-display-name');
+    const errorMessage = document.getElementById('error-message');
 
-                            <!-- 4. 個数 -->
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                                    個数 <span class="text-rose-500">*</span>
-                                </label>
-                                <input type="number" id="input-quantity" min="1" value="1" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-800 text-sm outline-none transition">
-                            </div>
-                        </div>
+    const posForm = document.getElementById('pos-form');
+    const inputDate = document.getElementById('input-date');
+    const inputName = document.getElementById('input-name');
+    const inputPrice = document.getElementById('input-price');
+    const inputQuantity = document.getElementById('input-quantity');
+    const inputCategory = document.getElementById('input-category');
+    const autoTotal = document.getElementById('auto-total');
 
-                        <!-- 5. 備考 / メモ -->
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                                備考 / メモ
-                            </label>
-                            <input type="text" id="input-memo" placeholder="例: テイクアウト, 10%割引適用" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-800 text-sm outline-none transition">
-                        </div>
+    const recordsList = document.getElementById('records-list');
+    const totalSalesEl = document.getElementById('total-sales');
+    const dailySummaryEl = document.getElementById('daily-summary');
+    const searchInput = document.getElementById('search-input');
 
-                        <!-- 自動計算された合計金額のリアルタイム表示 -->
-                        <div class="bg-indigo-50/70 border border-indigo-100 rounded-xl p-4 flex items-center justify-between">
-                            <div>
-                                <span class="text-xs font-semibold text-indigo-700 uppercase tracking-wide">合計金額 (自動計算)</span>
-                                <p class="text-xs text-slate-500">単価 × 個数</p>
-                            </div>
-                            <div class="text-2xl sm:text-3xl font-extrabold text-indigo-600">
-                                ¥ <span id="auto-total">0</span>
-                            </div>
-                        </div>
+    let currentUser = null;
+    let recordsData = [];
+    let salesChart = null;
 
-                        <!-- 登録ボタン -->
-                        <button type="button" id="btn-submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 flex items-center justify-center gap-2 active:scale-[0.99]">
-                            <i class="fa-solid fa-plus-circle"></i>
-                            <span id="btn-submit-text">登録する</span>
-                        </button>
-                    </form>
-                </div>
+    // 当日の日付をデフォルトセット
+    inputDate.value = new Date().toISOString().split('T')[0];
 
-                <!-- サマリー・日別集計カード (1カラム分) -->
-                <div class="space-y-6">
-                    <!-- 総売上サマリー -->
-                    <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-md p-6 text-white">
-                        <div class="flex justify-between items-center mb-2 opacity-90">
-                            <span class="text-xs font-bold uppercase tracking-wider">総売上合計</span>
-                            <i class="fa-solid fa-chart-line text-xl"></i>
-                        </div>
-                        <div class="text-3xl sm:text-4xl font-extrabold mb-1">
-                            ¥ <span id="summary-total">0</span>
-                        </div>
-                        <p class="text-xs opacity-80" id="summary-count-text">全 0 件のデータ</p>
-                    </div>
+    // --- 認証機能 ---
+    loginBtn.addEventListener('click', async () => {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        showError("ログインに失敗しました: " + err.message);
+      }
+    });
 
-                    <!-- 日別売上集計 -->
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-                        <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <i class="fa-solid fa-calendar-day text-indigo-500"></i>
-                            日別売上集計
-                        </h3>
-                        <div id="daily-summary-list" class="space-y-2 max-h-48 overflow-y-auto pr-1 text-sm text-slate-600">
-                            <p class="text-xs text-slate-400 text-center py-4">データがありません</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    logoutBtn.addEventListener('click', () => signOut(auth));
 
-            <!-- 中段: 売上グラフ -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-chart-bar text-indigo-600"></i>
-                        日別売上グラフ
-                    </h3>
-                </div>
-                <div class="relative w-full h-64 sm:h-72">
-                    <canvas id="salesChart"></canvas>
-                </div>
-            </div>
+    // ログイン状態の監視
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        userDisplayName.textContent = user.displayName || user.email;
+        loginScreen.classList.add('hidden');
+        appScreen.classList.remove('hidden');
+        loadRecords();
+      } else {
+        currentUser = null;
+        loginScreen.classList.remove('hidden');
+        appScreen.classList.add('hidden');
+      }
+    });
 
-            <!-- 下段: 登録済みデータ一覧 -->
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-list-check text-indigo-600"></i>
-                        登録データ一覧
-                    </h3>
+    // --- 単価 × 個数 の自動計算 ---
+    function updateAutoTotal() {
+      const price = parseFloat(inputPrice.value) || 0;
+      const qty = parseInt(inputQuantity.value) || 0;
+      autoTotal.textContent = (price * qty).toLocaleString();
+    }
+    inputPrice.addEventListener('input', updateAutoTotal);
+    inputQuantity.addEventListener('input', updateAutoTotal);
 
-                    <!-- 検索/絞り込みフォーム -->
-                    <div class="relative max-w-xs w-full">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <input type="text" id="search-input" placeholder="商品名で検索..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
-                    </div>
-                </div>
+    // --- データ登録 ---
+    posForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
 
-                <!-- テーブル (デスクトップ向け) / カード (スマホ向け) -->
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse min-w-[600px]">
-                        <thead>
-                            <tr class="border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/50">
-                                <th class="p-3">日付</th>
-                                <th class="p-3">商品名</th>
-                                <th class="p-3 text-right">単価</th>
-                                <th class="p-3 text-right">個数</th>
-                                <th class="p-3 text-right">合計</th>
-                                <th class="p-3">備考</th>
-                                <th class="p-3 text-center">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="records-tbody" class="divide-y divide-slate-100 text-sm">
-                            <!-- JS dynamically inserts rows here -->
-                        </tbody>
-                    </table>
-                </div>
+      const date = inputDate.value;
+      const name = inputName.value.trim();
+      const price = parseFloat(inputPrice.value);
+      const quantity = parseInt(inputQuantity.value);
+      const category = inputCategory.value.trim();
 
-                <!-- データなし表示 -->
-                <div id="no-data-msg" class="hidden text-center py-10 text-slate-400">
-                    <i class="fa-regular fa-folder-open text-4xl mb-2"></i>
-                    <p class="text-sm">データが見つかりませんでした。</p>
-                </div>
-            </div>
+      // 未入力・数値バリデーション
+      if (!date || !name || !category || isNaN(price) || isNaN(quantity)) {
+        showError("全ての項目を正しく入力してください。");
+        return;
+      }
+      if (price < 0 || quantity <= 0) {
+        showError("単価は0以上、個数は1以上を入力してください。");
+        return;
+      }
 
-        </main>
-    </div>
-
-    <!-- Firebase SDK (v11 Web Module API) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, 
-            GoogleAuthProvider, 
-            signInWithPopup, 
-            signOut, 
-            onAuthStateChanged 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            collection, 
-            addDoc, 
-            doc, 
-            updateDoc, 
-            deleteDoc, 
-            onSnapshot, 
-            serverTimestamp 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // =========================================================================
-        // 【重要】 Firebase 設定オブジェクト
-        // 開発・テスト環境または自身のプロジェクトの設定値をここに記述します。
-        // =========================================================================
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'posapp-default';
-
-        // Firebase アプリの初期化
-        let app, auth, db;
-        try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-        } catch (e) {
-            console.error("Firebase Initialization Error:", e);
-        }
-
-        // アプリの状態管理
-        let currentUser = null;
-        let unsubscribeStore = null;
-        let allRecords = [];
-        let salesChartInstance = null;
-
-        // DOM 要素の取得
-        const appLoading = document.getElementById('app-loading');
-        const authScreen = document.getElementById('auth-screen');
-        const mainScreen = document.getElementById('main-screen');
-        const btnLogin = document.getElementById('btn-login');
-        const btnLogout = document.getElementById('btn-logout');
-        const userDisplayName = document.getElementById('user-display-name');
-        const userAvatar = document.getElementById('user-avatar');
-        const firebaseNotice = document.getElementById('firebase-config-notice');
-
-        // フォームDOM要素
-        const posForm = document.getElementById('pos-form');
-        const editDocId = document.getElementById('edit-doc-id');
-        const inputDate = document.getElementById('input-date');
-        const inputItem = document.getElementById('input-item');
-        const inputPrice = document.getElementById('input-price');
-        const inputQuantity = document.getElementById('input-quantity');
-        const inputMemo = document.getElementById('input-memo');
-        const autoTotal = document.getElementById('auto-total');
-        const btnSubmit = document.getElementById('btn-submit');
-        const btnSubmitText = document.getElementById('btn-submit-text');
-        const btnCancelEdit = document.getElementById('btn-cancel-edit');
-        const formTitle = document.getElementById('form-title');
-        const formError = document.getElementById('form-error');
-        const formErrorMsg = document.getElementById('form-error-msg');
-
-        // データ表示DOM要素
-        const recordsTbody = document.getElementById('records-tbody');
-        const noDataMsg = document.getElementById('no-data-msg');
-        const searchInput = document.getElementById('search-input');
-        const summaryTotal = document.getElementById('summary-total');
-        const summaryCountText = document.getElementById('summary-count-text');
-        const dailySummaryList = document.getElementById('daily-summary-list');
-
-        // 今日の日付を初期値として設定 (YYYY-MM-DD)
-        const todayStr = new Date().toISOString().split('T')[0];
-        inputDate.value = todayStr;
-
-        // --- STREAMING_CHUNK:Defining event listeners and UI reactivity... ---
-        
-        // リアルタイム合計金額計算
-        function calculateAutoTotal() {
-            const price = parseFloat(inputPrice.value) || 0;
-            const qty = parseFloat(inputQuantity.value) || 0;
-            const total = price * qty;
-            autoTotal.textContent = Math.max(0, total).toLocaleString();
-        }
-
-        inputPrice.addEventListener('input', calculateAutoTotal);
-        inputQuantity.addEventListener('input', calculateAutoTotal);
-
-        // --- 認証機能 (Authentication) ---
-        onAuthStateChanged(auth, (user) => {
-            appLoading.classList.add('hidden');
-            if (user) {
-                currentUser = user;
-                // UI表示切替
-                authScreen.classList.add('hidden');
-                mainScreen.classList.remove('hidden');
-                
-                userDisplayName.textContent = user.displayName || user.email || "ユーザー";
-                if (user.photoURL) {
-                    userAvatar.src = user.photoURL;
-                    userAvatar.classList.remove('hidden');
-                } else {
-                    userAvatar.classList.add('hidden');
-                }
-
-                // ユーザー個別の Firestore データ監視を開始 (RULE 1: /artifacts/{appId}/users/{userId}/{collectionName})
-                subscribeToFirestoreData();
-            } else {
-                currentUser = null;
-                if (unsubscribeStore) unsubscribeStore();
-                authScreen.classList.remove('hidden');
-                mainScreen.classList.add('hidden');
-
-                if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-                    firebaseNotice.classList.remove('hidden');
-                }
-            }
+      try {
+        await addDoc(collection(db, "sales"), {
+          uid: currentUser.uid,
+          date,
+          name,
+          price,
+          quantity,
+          totalPrice: price * quantity,
+          category,
+          createdAt: serverTimestamp()
         });
 
-        // Google ログイン処理
-        btnLogin.addEventListener('click', async () => {
-            const provider = new GoogleAuthProvider();
+        // フォームのリセット
+        inputName.value = '';
+        inputPrice.value = '';
+        inputQuantity.value = '';
+        inputCategory.value = '';
+        autoTotal.textContent = '0';
+      } catch (err) {
+        showError("データの保存に失敗しました: " + err.message);
+      }
+    });
+
+    // --- Firestore データのリアルタイム読み込み (ユーザー限定) ---
+    function loadRecords() {
+      if (!currentUser) return;
+
+      // 自分のデータのみを取得するクエリ
+      const q = query(
+        collection(db, "sales"),
+        where("uid", "==", currentUser.uid),
+        orderBy("createdAt", "desc")
+      );
+
+      onSnapshot(q, (snapshot) => {
+        recordsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        renderRecords();
+      }, (err) => {
+        showError("データ取得エラー: " + err.message);
+      });
+    }
+
+    // --- テーブル表示＆売上集計・グラフ更新 ---
+    function renderRecords() {
+      const filterText = searchInput.value.toLowerCase().trim();
+      recordsList.innerHTML = '';
+
+      let totalSales = 0;
+      const dailyTotals = {};
+
+      // 絞り込みフィルタリング
+      const filteredRecords = recordsData.filter(item => {
+        return item.name.toLowerCase().includes(filterText);
+      });
+
+      filteredRecords.forEach(item => {
+        // テーブル行作成
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-gray-50 border-b";
+        tr.innerHTML = `
+          <td class="p-3 text-xs sm:text-sm">${item.date}</td>
+          <td class="p-3 font-medium text-xs sm:text-sm">${escapeHtml(item.name)}</td>
+          <td class="p-3 text-xs sm:text-sm"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">${escapeHtml(item.category)}</span></td>
+          <td class="p-3 text-right text-xs sm:text-sm">${item.price.toLocaleString()}円</td>
+          <td class="p-3 text-right text-xs sm:text-sm">${item.quantity}</td>
+          <td class="p-3 text-right font-bold text-xs sm:text-sm">${item.totalPrice.toLocaleString()}円</td>
+          <td class="p-3 text-center">
+            <button data-id="${item.id}" class="delete-btn text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50">
+              削除
+            </button>
+          </td>
+        `;
+        recordsList.appendChild(tr);
+      });
+
+      // 集計処理 (フィルタリングに関わらず全所有データで集計)
+      recordsData.forEach(item => {
+        totalSales += item.totalPrice;
+        dailyTotals[item.date] = (dailyTotals[item.date] || 0) + item.totalPrice;
+      });
+
+      // 総合計更新
+      totalSalesEl.textContent = `${totalSales.toLocaleString()} 円`;
+
+      // 日別集計一覧更新
+      dailySummaryEl.innerHTML = '';
+      const sortedDates = Object.keys(dailyTotals).sort().reverse();
+      sortedDates.forEach(date => {
+        const div = document.createElement('div');
+        div.className = "flex justify-between";
+        div.innerHTML = `<span>${date}</span> <span class="font-bold">${dailyTotals[date].toLocaleString()}円</span>`;
+        dailySummaryEl.appendChild(div);
+      });
+
+      // 削除ボタンのイベント付与
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const docId = e.target.getAttribute('data-id');
+          if (confirm("この記録を削除しますか？")) {
             try {
-                await signInWithPopup(auth, provider);
+              await deleteDoc(doc(db, "sales", docId));
             } catch (err) {
-                alert("ログインに失敗しました: " + err.message);
+              showError("削除に失敗しました: " + err.message);
             }
+          }
         });
+      });
 
-        // ログアウト処理
-        btnLogout.addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-            } catch (err) {
-                console.error("Signout error", err);
-            }
-        });
+      // グラフ更新
+      updateChart(dailyTotals);
+    }
 
-        // --- STREAMING_CHUNK:Defining Firestore database operations... ---
+    // 検索入力時にテーブルをフィルタリング
+    searchInput.addEventListener('input', renderRecords);
 
-        // Firestore リアルタイムリスナー (ユーザー単位分離)
-        function subscribeToFirestoreData() {
-            if (!currentUser) return;
+    // --- 売上グラフ (Chart.js) ---
+    function updateChart(dailyTotals) {
+      const dates = Object.keys(dailyTotals).sort();
+      const totals = dates.map(d => dailyTotals[d]);
 
-            // 遵守規則 1: /artifacts/{appId}/users/{userId}/records
-            const userRecordsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'records');
+      const ctx = document.getElementById('sales-chart').getContext('2d');
 
-            // 遵守規則 2: 複合インデックス回避のためメモリ側でソート
-            unsubscribeStore = onSnapshot(userRecordsRef, (snapshot) => {
-                allRecords = [];
-                snapshot.forEach((docSnap) => {
-                    allRecords.push({
-                        id: docSnap.id,
-                        ...docSnap.data()
-                    });
-                });
+      if (salesChart) {
+        salesChart.destroy();
+      }
 
-                // 日付降順 (新しい日付順) にソート
-                allRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                // レンダリング実行
-                renderRecords();
-            }, (error) => {
-                console.error("Firestore Error:", error);
-            });
+      salesChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: '売上 (円)',
+            data: totals,
+            borderColor: '#4F46E5',
+            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true }
+          }
         }
+      });
+    }
 
-        // 入力バリデーション
-        function validateForm() {
-            formError.classList.add('hidden');
-            
-            const dateVal = inputDate.value;
-            const itemVal = inputItem.value.trim();
-            const priceVal = parseFloat(inputPrice.value);
-            const qtyVal = parseFloat(inputQuantity.value);
-
-            if (!dateVal) {
-                showError("日付を入力してください。");
-                return false;
-            }
-            if (!itemVal) {
-                showError("商品名を入力してください。");
-                return false;
-            }
-            if (isNaN(priceVal) || priceVal < 0) {
-                showError("単価には0以上の数値を入力してください。");
-                return false;
-            }
-            if (isNaN(qtyVal) || qtyVal <= 0) {
-                showError("個数には1以上の数値を入力してください。");
-                return false;
-            }
-
-            return true;
-        }
-
-        function showError(msg) {
-            formErrorMsg.textContent = msg;
-            formError.classList.remove('hidden');
-        }
-
-        // データの登録・更新ボタンの処理
-        btnSubmit.addEventListener('click', async () => {
-            if (!validateForm()) return;
-
-            const docId = editDocId.value;
-            const recordData = {
-                date: inputDate.value,
-                item: inputItem.value.trim(),
-                price: Number(inputPrice.value),
-                quantity: Number(inputQuantity.value),
-                total: Number(inputPrice.value) * Number(inputQuantity.value),
-                memo: inputMemo.value.trim(),
-                updatedAt: serverTimestamp()
-            };
-
-            btnSubmit.disabled = true;
-            btnSubmitText.textContent = "保存中...";
-
-            try {
-                const userRecordsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'records');
-                
-                if (docId) {
-                    // 編集 (Update)
-                    const targetDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'records', docId);
-                    await updateDoc(targetDocRef, recordData);
-                } else {
-                    // 新規追加 (Add)
-                    recordData.createdAt = serverTimestamp();
-                    await addDoc(userRecordsRef, recordData);
-                }
-
-                resetForm();
-            } catch (err) {
-                showError("保存中にエラーが発生しました: " + err.message);
-            } finally {
-                btnSubmit.disabled = false;
-            }
-        });
-
-        // フォームのリセット・キャンセル
-        function resetForm() {
-            editDocId.value = '';
-            inputItem.value = '';
-            inputPrice.value = '';
-            inputQuantity.value = '1';
-            inputMemo.value = '';
-            inputDate.value = todayStr;
-            autoTotal.textContent = '0';
-            
-            formTitle.innerHTML = `<i class="fa-solid fa-cart-plus text-indigo-600"></i> 伝票登録`;
-            btnSubmitText.textContent = "登録する";
-            btnCancelEdit.classList.add('hidden');
-            formError.classList.add('hidden');
-        }
-
-        btnCancelEdit.addEventListener('click', resetForm);
-
-        // --- STREAMING_CHUNK:Rendering list, aggregations, and charts... ---
-
-        // 検索フィルターイベント
-        searchInput.addEventListener('input', () => {
-            renderRecords();
-        });
-
-        // 画面描画処理 (一覧・サマリー・グラフ)
-        function renderRecords() {
-            const filterText = searchInput.value.toLowerCase().trim();
-            const filteredRecords = allRecords.filter(r => 
-                (r.item && r.item.toLowerCase().includes(filterText)) ||
-                (r.memo && r.memo.toLowerCase().includes(filterText))
-            );
-
-            // 1. テーブル描画
-            recordsTbody.innerHTML = '';
-            if (filteredRecords.length === 0) {
-                noDataMsg.classList.remove('hidden');
-            } else {
-                noDataMsg.classList.add('hidden');
-                filteredRecords.forEach(r => {
-                    const tr = document.createElement('tr');
-                    tr.className = "hover:bg-slate-50/80 transition-colors";
-                    tr.innerHTML = `
-                        <td class="p-3 text-xs font-medium text-slate-600 whitespace-nowrap">${escapeHtml(r.date)}</td>
-                        <td class="p-3 text-sm font-semibold text-slate-800">${escapeHtml(r.item)}</td>
-                        <td class="p-3 text-xs text-right text-slate-600 whitespace-nowrap">¥${(r.price || 0).toLocaleString()}</td>
-                        <td class="p-3 text-xs text-right text-slate-600 whitespace-nowrap">${r.quantity || 0}</td>
-                        <td class="p-3 text-sm font-bold text-right text-indigo-600 whitespace-nowrap">¥${(r.total || 0).toLocaleString()}</td>
-                        <td class="p-3 text-xs text-slate-500 max-w-[150px] truncate">${escapeHtml(r.memo || '-')}</td>
-                        <td class="p-3 text-center whitespace-nowrap space-x-1">
-                            <button class="btn-edit-item text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-indigo-50 transition" data-id="${r.id}">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button class="btn-delete-item text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition" data-id="${r.id}">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </td>
-                    `;
-                    recordsTbody.appendChild(tr);
-                });
-            }
-
-            // 編集・削除ボタンのアクション付与
-            document.querySelectorAll('.btn-edit-item').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.currentTarget.getAttribute('data-id');
-                    startEditing(id);
-                });
-            });
-
-            document.querySelectorAll('.btn-delete-item').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.currentTarget.getAttribute('data-id');
-                    deleteRecord(id);
-                });
-            });
-
-            // 2. 集計処理 (総売上 & 日別集計)
-            let grandTotal = 0;
-            const dailyAgg = {};
-
-            allRecords.forEach(r => {
-                grandTotal += (r.total || 0);
-                const d = r.date || '日付なし';
-                dailyAgg[d] = (dailyAgg[d] || 0) + (r.total || 0);
-            });
-
-            summaryTotal.textContent = grandTotal.toLocaleString();
-            summaryCountText.textContent = `全 ${allRecords.length} 件のデータ`;
-
-            // 日別一覧表示
-            dailySummaryList.innerHTML = '';
-            const sortedDates = Object.keys(dailyAgg).sort((a, b) => new Date(b) - new Date(a));
-            
-            if (sortedDates.length === 0) {
-                dailySummaryList.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">データがありません</p>`;
-            } else {
-                sortedDates.forEach(d => {
-                    const row = document.createElement('div');
-                    row.className = "flex justify-between items-center p-2 rounded-lg bg-slate-50 text-xs";
-                    row.innerHTML = `
-                        <span class="font-medium text-slate-700">${d}</span>
-                        <span class="font-bold text-slate-900">¥${dailyAgg[d].toLocaleString()}</span>
-                    `;
-                    dailySummaryList.appendChild(row);
-                });
-            }
-
-            // 3. Chart.js グラフ描画
-            renderChart(dailyAgg);
-        }
-
-        // 編集モードへの移行
-        function startEditing(id) {
-            const target = allRecords.find(r => r.id === id);
-            if (!target) return;
-
-            editDocId.value = target.id;
-            inputDate.value = target.date || '';
-            inputItem.value = target.item || '';
-            inputPrice.value = target.price || '';
-            inputQuantity.value = target.quantity || 1;
-            inputMemo.value = target.memo || '';
-
-            calculateAutoTotal();
-
-            formTitle.innerHTML = `<i class="fa-solid fa-pen-to-square text-indigo-600"></i> 伝票の編集`;
-            btnSubmitText.textContent = "更新する";
-            btnCancelEdit.classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // レコード削除
-        async function deleteRecord(id) {
-            if (!confirm("このデータを削除してもよろしいですか？")) return;
-            try {
-                const targetDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'records', id);
-                await deleteDoc(targetDocRef);
-            } catch (err) {
-                alert("削除に失敗しました: " + err.message);
-            }
-        }
-
-        // 売上グラフ (Chart.js) の更新
-        function renderChart(dailyAgg) {
-            const ctx = document.getElementById('salesChart').getContext('2d');
-
-            // 昇順 (過去 → 最新) にソートしてグラフ表示
-            const sortedDatesAsc = Object.keys(dailyAgg).sort((a, b) => new Date(a) - new Date(b));
-            const dataValues = sortedDatesAsc.map(d => dailyAgg[d]);
-
-            if (salesChartInstance) {
-                salesChartInstance.destroy();
-            }
-
-            salesChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: sortedDatesAsc,
-                    datasets: [{
-                        label: '日別売上 (円)',
-                        data: dataValues,
-                        backgroundColor: 'rgba(79, 70, 229, 0.7)',
-                        borderColor: 'rgba(79, 70, 229, 1)',
-                        borderWidth: 1.5,
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: (ctx) => ` 売上: ¥${ctx.parsed.y.toLocaleString()}`
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: (val) => '¥' + val.toLocaleString()
-                            }
-                        }
-                    }
-                }
-            });
-        }
-
-        // HTML エスケープ処理
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-    </script>
+    // --- 補助関数 ---
+    function showError(msg) {
+      errorMessage.textContent = msg;
+      errorMessage.classList.remove('hidden');
+    }
+    function hideError() {
+      errorMessage.classList.add('hidden');
+    }
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      })[m]);
+    }
+  </script>
 </body>
 </html>
