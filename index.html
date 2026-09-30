@@ -1,367 +1,693 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>POS App - レジアプリ</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body class="bg-gray-100 min-h-screen text-gray-800">
-
-  <!-- 1. 未ログイン画面 -->
-  <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-4">
-    <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md text-center space-y-6">
-      <h1 class="text-2xl font-bold text-gray-900">POS レジアプリ</h1>
-      <p class="text-sm text-gray-600">ご利用には Google アカウントでのログインが必要です。</p>
-      <button id="login-btn" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg shadow-sm hover:bg-gray-50 font-medium transition">
-        <svg class="w-5 h-5" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-        </svg>
-        Google アカウントでログイン
-      </button>
-    </div>
-  </div>
-
-  <!-- 2. ログイン後画面 -->
-  <div id="app-screen" class="hidden min-h-screen flex flex-col">
-    <header class="bg-indigo-600 text-white p-4 shadow-md flex justify-between items-center">
-      <h1 class="text-xl font-bold">POS App</h1>
-      <div class="flex items-center gap-3">
-        <span id="user-display-name" class="text-sm font-medium hidden sm:inline"></span>
-        <button id="logout-btn" class="bg-indigo-700 hover:bg-indigo-800 text-xs sm:text-sm px-3 py-1.5 rounded transition">
-          ログアウト
-        </button>
-      </div>
-    </header>
-
-    <main class="flex-1 p-4 max-w-5xl mx-auto w-full space-y-6">
-      <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm"></div>
-
-      <section class="bg-white p-5 rounded-xl shadow-sm space-y-4">
-        <h2 class="text-lg font-bold border-b pb-2 text-gray-700">商品登録</h2>
-        <form id="pos-form" class="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">日付</label>
-            <input type="date" id="input-date" class="w-full border rounded p-2 text-sm" required>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">商品名</label>
-            <input type="text" id="input-name" placeholder="例: リンゴ" class="w-full border rounded p-2 text-sm" required>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">単価 (円)</label>
-            <input type="number" id="input-price" min="0" placeholder="150" class="w-full border rounded p-2 text-sm" required>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">個数</label>
-            <input type="number" id="input-quantity" min="1" placeholder="2" class="w-full border rounded p-2 text-sm" required>
-          </div>
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">カテゴリ</label>
-            <input type="text" id="input-category" placeholder="例: 食品" class="w-full border rounded p-2 text-sm" required>
-          </div>
-          
-          <div class="md:col-span-5 flex flex-col sm:flex-row justify-between items-center bg-gray-50 p-3 rounded mt-2 gap-3">
-            <div class="text-gray-700 font-semibold">
-              小計: <span id="auto-total" class="text-xl text-indigo-600 font-bold">0</span> 円
-            </div>
-            <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-8 rounded shadow transition">
-              登録
-            </button>
-          </div>
-        </form>
-      </section>
-
-      <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white p-5 rounded-xl shadow-sm space-y-2 flex flex-col justify-center">
-          <h3 class="text-xs font-semibold text-gray-400 uppercase">総合計売上</h3>
-          <p id="total-sales" class="text-3xl font-extrabold text-indigo-600">0 円</p>
-          <div id="daily-summary" class="text-xs text-gray-500 space-y-1 max-h-32 overflow-y-auto pt-2 border-t"></div>
-        </div>
-
-        <div class="bg-white p-5 rounded-xl shadow-sm md:col-span-2">
-          <h3 class="text-sm font-bold text-gray-600 mb-2">日別売上推移</h3>
-          <div class="h-40">
-            <canvas id="sales-chart"></canvas>
-          </div>
-        </div>
-      </section>
-
-      <section class="bg-white p-5 rounded-xl shadow-sm space-y-4">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-3">
-          <h2 class="text-lg font-bold text-gray-700">登録履歴 (自分の記録)</h2>
-          <input type="text" id="search-input" placeholder="商品名で絞り込み..." class="border rounded px-3 py-1.5 text-sm w-full sm:w-64">
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-gray-50 text-gray-600">
-              <tr>
-                <th class="p-3">日付</th>
-                <th class="p-3">商品名</th>
-                <th class="p-3">カテゴリ</th>
-                <th class="p-3 text-right">単価</th>
-                <th class="p-3 text-right">個数</th>
-                <th class="p-3 text-right">合計</th>
-                <th class="p-3 text-center">操作</th>
-              </tr>
-            </thead>
-            <tbody id="records-list" class="divide-y"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyCAtfJp9Yj65bpmx3Qppv8__TRoStT1kpE",
-      authDomain: "posapp-d3f89.firebaseapp.com",
-      projectId: "posapp-d3f89",
-      storageBucket: "posapp-d3f89.firebasestorage.app",
-      messagingSenderId: "159737280029",
-      appId: "1:159737280029:web:d4ccdc7cb4dd669a5fb8f4"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
-
-    const loginScreen = document.getElementById('login-screen');
-    const appScreen = document.getElementById('app-screen');
-    const loginBtn = document.getElementById('login-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const userDisplayName = document.getElementById('user-display-name');
-    const errorMessage = document.getElementById('error-message');
-
-    const posForm = document.getElementById('pos-form');
-    const inputDate = document.getElementById('input-date');
-    const inputName = document.getElementById('input-name');
-    const inputPrice = document.getElementById('input-price');
-    const inputQuantity = document.getElementById('input-quantity');
-    const inputCategory = document.getElementById('input-category');
-    const autoTotal = document.getElementById('auto-total');
-
-    const recordsList = document.getElementById('records-list');
-    const totalSalesEl = document.getElementById('total-sales');
-    const dailySummaryEl = document.getElementById('daily-summary');
-    const searchInput = document.getElementById('search-input');
-
-    let currentUser = null;
-    let recordsData = [];
-    let salesChart = null;
-
-    inputDate.value = new Date().toISOString().split('T')[0];
-
-    loginBtn.addEventListener('click', async () => {
-      try {
-        await signInWithPopup(auth, provider);
-      } catch (err) {
-        showError("ログインに失敗しました: " + err.message);
-      }
-    });
-
-    logoutBtn.addEventListener('click', () => signOut(auth));
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        currentUser = user;
-        userDisplayName.textContent = user.displayName || user.email;
-        loginScreen.classList.add('hidden');
-        appScreen.classList.remove('hidden');
-        loadRecords();
-      } else {
-        currentUser = null;
-        loginScreen.classList.remove('hidden');
-        appScreen.classList.add('hidden');
-      }
-    });
-
-    function updateAutoTotal() {
-      const price = parseFloat(inputPrice.value) || 0;
-      const qty = parseInt(inputQuantity.value) || 0;
-      autoTotal.textContent = (price * qty).toLocaleString();
-    }
-    inputPrice.addEventListener('input', updateAutoTotal);
-    inputQuantity.addEventListener('input', updateAutoTotal);
-
-    posForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideError();
-
-      const date = inputDate.value;
-      const name = inputName.value.trim();
-      const price = parseFloat(inputPrice.value);
-      const quantity = parseInt(inputQuantity.value);
-      const category = inputCategory.value.trim();
-
-      if (!date || !name || !category || isNaN(price) || isNaN(quantity)) {
-        showError("全ての項目を正しく入力してください。");
-        return;
-      }
-      if (price < 0 || quantity <= 0) {
-        showError("単価は0以上、個数は1以上を入力してください。");
-        return;
-      }
-
-      try {
-        await addDoc(collection(db, "sales"), {
-          uid: currentUser.uid,
-          date,
-          name,
-          price,
-          quantity,
-          totalPrice: price * quantity,
-          category,
-          createdAt: serverTimestamp()
-        });
-
-        inputName.value = '';
-        inputPrice.value = '';
-        inputQuantity.value = '';
-        inputCategory.value = '';
-        autoTotal.textContent = '0';
-      } catch (err) {
-        showError("データの保存に失敗しました: " + err.message);
-      }
-    });
-
-    function loadRecords() {
-      if (!currentUser) return;
-
-      const q = query(
-        collection(db, "sales"),
-        where("uid", "==", currentUser.uid),
-        orderBy("createdAt", "desc")
-      );
-
-      onSnapshot(q, (snapshot) => {
-        recordsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        renderRecords();
-      }, (err) => {
-        showError("データ取得エラー: " + err.message);
-      });
-    }
-
-    function renderRecords() {
-      const filterText = searchInput.value.toLowerCase().trim();
-      recordsList.innerHTML = '';
-
-      let totalSales = 0;
-      const dailyTotals = {};
-
-      const filteredRecords = recordsData.filter(item => {
-        return item.name.toLowerCase().includes(filterText);
-      });
-
-      filteredRecords.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-gray-50 border-b";
-        tr.innerHTML = `
-          <td class="p-3 text-xs sm:text-sm">${item.date}</td>
-          <td class="p-3 font-medium text-xs sm:text-sm">${escapeHtml(item.name)}</td>
-          <td class="p-3 text-xs sm:text-sm"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">${escapeHtml(item.category)}</span></td>
-          <td class="p-3 text-right text-xs sm:text-sm">${item.price.toLocaleString()}円</td>
-          <td class="p-3 text-right text-xs sm:text-sm">${item.quantity}</td>
-          <td class="p-3 text-right font-bold text-xs sm:text-sm">${item.totalPrice.toLocaleString()}円</td>
-          <td class="p-3 text-center">
-            <button data-id="${item.id}" class="delete-btn text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50">
-              削除
-            </button>
-          </td>
-        `;
-        recordsList.appendChild(tr);
-      });
-
-      recordsData.forEach(item => {
-        totalSales += item.totalPrice;
-        dailyTotals[item.date] = (dailyTotals[item.date] || 0) + item.totalPrice;
-      });
-
-      totalSalesEl.textContent = `${totalSales.toLocaleString()} 円`;
-
-      dailySummaryEl.innerHTML = '';
-      const sortedDates = Object.keys(dailyTotals).sort().reverse();
-      sortedDates.forEach(date => {
-        const div = document.createElement('div');
-        div.className = "flex justify-between";
-        div.innerHTML = `<span>${date}</span> <span class="font-bold">${dailyTotals[date].toLocaleString()}円</span>`;
-        dailySummaryEl.appendChild(div);
-      });
-
-      document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          const docId = e.target.getAttribute('data-id');
-          if (confirm("この記録を削除しますか？")) {
-            try {
-              await deleteDoc(doc(db, "sales", docId));
-            } catch (err) {
-              showError("削除に失敗しました: " + err.message);
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スマートPOSレジアプリ - Smart POS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
             }
-          }
-        });
-      });
-
-      updateChart(dailyTotals);
-    }
-
-    searchInput.addEventListener('input', renderRecords);
-
-    function updateChart(dailyTotals) {
-      const dates = Object.keys(dailyTotals).sort();
-      const totals = dates.map(d => dailyTotals[d]);
-      const ctx = document.getElementById('sales-chart').getContext('2d');
-
-      if (salesChart) {
-        salesChart.destroy();
-      }
-
-      salesChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: dates,
-          datasets: [{
-            label: '売上 (円)',
-            data: totals,
-            borderColor: '#4F46E5',
-            backgroundColor: 'rgba(79, 70, 229, 0.1)',
-            fill: true,
-            tension: 0.2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true } }
         }
-      });
-    }
+    </script>
+    
+    <style>
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen flex flex-col antialiased">
 
-    function showError(msg) {
-      errorMessage.textContent = msg;
-      errorMessage.classList.remove('hidden');
-    }
-    function hideError() {
-      errorMessage.classList.add('hidden');
-    }
-    function escapeHtml(str) {
-      return str.replace(/[&<>"']/g, (m) => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-      })[m]);
-    }
-  </script>
+    <!-- Custom Modal/Toast Notification Area -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- 1. LOGIN SCREEN (Show when user is NOT logged in) -->
+    <div id="login-view" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950">
+        <div class="max-w-md w-full bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20 text-center">
+            <div class="w-16 h-16 bg-primary-500/10 text-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl shadow-inner">
+                <i class="fa-solid me-0.5 fa-calculator"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">POS Smart Register</h1>
+            <p class="text-sm text-slate-500 mb-8">クラウド同期対応のスマートPOSレジシステム。<br>利用を開始するにはGoogleアカウントでログインしてください。</p>
+            
+            <button id="google-login-btn" class="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3.5 px-4 rounded-xl border border-slate-300 shadow-sm transition duration-200 hover:shadow transform hover:-translate-y-0.5 active:translate-y-0">
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                <span>Googleアカウントでログイン</span>
+            </button>
+            
+            <p class="text-xs text-slate-400 mt-6">
+                ※ログインすることでデータがクラウド(Firestore)に自動保存されます。
+            </p>
+        </div>
+    </div>
+
+    <!-- 2. MAIN APP SCREEN (Shown only when logged in) -->
+    <div id="app-view" class="hidden flex-col min-h-screen">
+        <!-- Header / Navbar -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary-600 text-white rounded-xl flex items-center justify-center text-lg shadow-md shadow-primary-500/20">
+                        <i class="fa-solid fa-cash-register"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-slate-900 text-lg leading-none">posapp</h1>
+                        <span class="text-xs text-slate-400">Cloud POS System</span>
+                    </div>
+                </div>
+
+                <!-- User Profile & Action Menu -->
+                <div class="flex items-center gap-4">
+                    <button id="guide-modal-btn" class="flex items-center gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition duration-150 border border-indigo-200">
+                        <i class="fa-brands fa-github"></i>
+                        <span class="hidden sm:inline">Hosting & GitHub 構成ガイド</span>
+                        <span class="sm:hidden">ガイド</span>
+                    </button>
+
+                    <div class="h-6 w-px bg-slate-200"></div>
+
+                    <div class="flex items-center gap-3">
+                        <img id="user-avatar" class="w-8 h-8 rounded-full border border-slate-200 object-cover" src="" alt="User Avatar">
+                        <div class="hidden md:block text-left">
+                            <div id="user-name" class="text-xs font-semibold text-slate-800 leading-tight">ユーザー名</div>
+                            <div id="user-email" class="text-[10px] text-slate-400 leading-tight">user@example.com</div>
+                        </div>
+                        <button id="logout-btn" title="ログアウト" class="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-slate-100 transition">
+                            <i class="fa-solid fa-right-from-bracket text-base"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Panel: Data Entry Form (5 cols on lg) -->
+            <section class="lg:col-span-5 flex flex-col gap-6">
+                <!-- Registration Form Card -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+                    <div class="flex items-center justify-between mb-5 border-b border-slate-100 pb-3">
+                        <h2 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-cart-plus text-primary-600"></i>
+                            会計アイテム登録
+                        </h2>
+                        <span class="text-xs bg-slate-100 text-slate-500 font-medium px-2.5 py-1 rounded-full">新規入力</span>
+                    </div>
+
+                    <form id="pos-form" class="space-y-4">
+                        <!-- 1. 商品名 -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                商品名 <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="item-name" required placeholder="例: コーヒー、ドーナツ" 
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition text-sm">
+                        </div>
+
+                        <!-- 2 & 3: 単価 & 個数 (2 Column Layout) -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- 単価 (円) -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                    単価 (円) <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="number" id="item-price" min="0" step="1" required placeholder="0" 
+                                        class="w-full pl-3.5 pr-8 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition text-sm font-medium">
+                                    <span class="absolute right-3 top-2.5 text-xs text-slate-400 font-medium pointer-events-none">円</span>
+                                </div>
+                            </div>
+                            <!-- 個数 -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                    個数 <span class="text-red-500">*</span>
+                                </label>
+                                <input type="number" id="item-quantity" min="1" step="1" value="1" required 
+                                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition text-sm font-medium">
+                            </div>
+                        </div>
+
+                        <!-- Realtime Calculated Total Banner -->
+                        <div class="bg-gradient-to-r from-primary-50 to-indigo-50 border border-primary-100 rounded-xl p-4 flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-600">小計 (自動計算):</span>
+                            <div class="text-right">
+                                <span id="calculated-total" class="text-2xl font-black text-primary-700">¥0</span>
+                            </div>
+                        </div>
+
+                        <!-- 4. 日付 -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                日付 <span class="text-red-500">*</span>
+                            </label>
+                            <input type="date" id="item-date" required 
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition text-sm">
+                        </div>
+
+                        <!-- 5. メモ -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                メモ (任意)
+                            </label>
+                            <textarea id="item-memo" rows="2" placeholder="備考や詳細情報を入力..." 
+                                class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition text-sm resize-none"></textarea>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" id="submit-btn" 
+                            class="w-full bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-bold py-3 px-4 rounded-xl shadow-md shadow-primary-500/20 transition duration-150 flex items-center justify-center gap-2 mt-2">
+                            <i class="fa-solid fa-check"></i>
+                            <span>登録する</span>
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Right Panel: Sales Dashboard & Transaction List (7 cols on lg) -->
+            <section class="lg:col-span-7 flex flex-col gap-6">
+                <!-- Summary Dashboard Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Card 1: Total Sales Amount -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">売上総合計</p>
+                            <h3 id="grand-total" class="text-2xl font-black text-slate-900 mt-1">¥0</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-coins"></i>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Record Count -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">登録件数</p>
+                            <h3 id="record-count" class="text-2xl font-black text-slate-900 mt-1">0件</h3>
+                        </div>
+                        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction List Card -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col overflow-hidden">
+                    <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-white">
+                        <div class="flex items-center gap-2">
+                            <h2 class="font-bold text-slate-800">登録済みデータ一覧</h2>
+                            <span id="live-indicator" class="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-medium">
+                                <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> リアルタイム同期中
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- List Items Container -->
+                    <div class="flex-1 overflow-y-auto max-h-[500px] p-4 divide-y divide-slate-100" id="sales-list-container">
+                        <!-- Empty State -->
+                        <div id="empty-state" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-inbox text-4xl mb-3 text-slate-300"></i>
+                            <p class="text-sm font-medium">登録されているデータはありません</p>
+                            <p class="text-xs text-slate-400 mt-1">左側のフォームから売上データを追加してください</p>
+                        </div>
+                        <!-- Dynamic items will be appended here -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal: GitHub & Firebase Hosting Deployment Guide -->
+    <div id="guide-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-100">
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center">
+                        <i class="fa-brands fa-github text-lg"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800">GitHub & Firebase Hosting デプロイ手順</h3>
+                </div>
+                <button id="close-guide-modal" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6 overflow-y-auto space-y-6 text-sm text-slate-600">
+                
+                <!-- STEP 1: GitHub -->
+                <div class="space-y-2">
+                    <h4 class="font-bold text-slate-800 flex items-center gap-2 text-base">
+                        <span class="w-6 h-6 rounded-full bg-slate-900 text-white text-xs flex items-center justify-center">1</span>
+                        GitHub リポジトリ (`posapp`) の作成とアップロード
+                    </h4>
+                    <p class="text-xs text-slate-500">PCの端末(Terminal / Command Prompt)で以下のコマンドを実行します。</p>
+                    <div class="bg-slate-900 text-slate-200 p-3.5 rounded-xl text-xs font-mono overflow-x-auto space-y-1">
+                        <div><span class="text-slate-500"># プロジェクトフォルダを作成して移動</span></div>
+                        <div>mkdir posapp && cd posapp</div>
+                        <div><span class="text-slate-500"># 本ファイルのコードを index.html として保存後、Git初期化</span></div>
+                        <div>git init</div>
+                        <div>git add index.html</div>
+                        <div>git commit -m "Initial commit: POS App"</div>
+                        <div><span class="text-slate-500"># GitHubで「posapp」リポジトリ作成後、作成したURLに紐付け</span></div>
+                        <div>git branch -M main</div>
+                        <div>git remote add origin https://github.com/あなたのユーザー名/posapp.git</div>
+                        <div>git push -u origin main</div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Firebase Hosting -->
+                <div class="space-y-2">
+                    <h4 class="font-bold text-slate-800 flex items-center gap-2 text-base">
+                        <span class="w-6 h-6 rounded-full bg-amber-500 text-white text-xs flex items-center justify-center">2</span>
+                        Firebase Hosting へのデプロイ（Web公開）
+                    </h4>
+                    <p class="text-xs text-slate-500">CLIツールを使用してFirebaseに公開します。</p>
+                    <div class="bg-slate-900 text-slate-200 p-3.5 rounded-xl text-xs font-mono overflow-x-auto space-y-1">
+                        <div><span class="text-slate-500"># 1. Firebase CLI のインストール (未導入の場合)</span></div>
+                        <div>npm install -g firebase-tools</div>
+                        <div><span class="text-slate-500"># 2. Firebaseにログイン</span></div>
+                        <div>firebase login</div>
+                        <div><span class="text-slate-500"># 3. Hostingの初期化 (質問には public directory: . と答え、index.html の上書きは No)</span></div>
+                        <div>firebase init hosting</div>
+                        <div><span class="text-slate-500"># 4. デプロイ実行</span></div>
+                        <div>firebase deploy</div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Setup Notice -->
+                <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 text-indigo-900 text-xs leading-relaxed space-y-1">
+                    <div class="font-bold flex items-center gap-1.5 text-indigo-800">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Firebase Auth のドメイン許可設定について
+                    </div>
+                    <p>Firebase Consoleの「Authentication」→「設定」→「承認済みドメイン」に、Hostingで発行されたURL (例: <code class="bg-indigo-100 px-1 py-0.5 rounded">your-app.web.app</code>) を追加することで、本番URLからGoogleログインが可能になります。</p>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl text-right">
+                <button id="close-guide-modal-btn" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-xl text-xs transition">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Setup & Application Logic Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInWithPopup, 
+            GoogleAuthProvider, 
+            signOut, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            deleteDoc, 
+            doc, 
+            onSnapshot, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase Config Container
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : {
+                // デフォルトのフォールバック用設定（ローカル開発等）
+                apiKey: "AIzaSyDummyKeyForTestingOnly",
+                authDomain: "posapp-demo.firebaseapp.com",
+                projectId: "posapp-demo",
+                storageBucket: "posapp-demo.appspot.com",
+                messagingSenderId: "1234567890",
+                appId: "1:1234567890:web:abcdef123456"
+            };
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'posapp';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        // State Management
+        let currentUser = null;
+        let unsubscribeSnapshot = null;
+
+        // DOM Element References
+        const loginView = document.getElementById('login-view');
+        const appView = document.getElementById('app-view');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        
+        const userNameEl = document.getElementById('user-name');
+        const userEmailEl = document.getElementById('user-email');
+        const userAvatarEl = document.getElementById('user-avatar');
+
+        const posForm = document.getElementById('pos-form');
+        const itemNameInput = document.getElementById('item-name');
+        const itemPriceInput = document.getElementById('item-price');
+        const itemQuantityInput = document.getElementById('item-quantity');
+        const itemDateInput = document.getElementById('item-date');
+        const itemMemoInput = document.getElementById('item-memo');
+        const calculatedTotalEl = document.getElementById('calculated-total');
+
+        const salesListContainer = document.getElementById('sales-list-container');
+        const emptyState = document.getElementById('empty-state');
+        const grandTotalEl = document.getElementById('grand-total');
+        const recordCountEl = document.getElementById('record-count');
+
+        const guideModal = document.getElementById('guide-modal');
+        const guideModalBtn = document.getElementById('guide-modal-btn');
+        const closeGuideModalBtn = document.getElementById('close-guide-modal');
+        const closeGuideModalBtn2 = document.getElementById('close-guide-modal-btn');
+
+        // 1. Set Default Date to Today (YYYY-MM-DD)
+        const setTodayDate = () => {
+            const today = new Date().toISOString().split('T')[0];
+            itemDateInput.value = today;
+        };
+        setTodayDate();
+
+        // 2. Format Currency (JPY)
+        const formatJPY = (amount) => {
+            return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(amount);
+        };
+
+        // 3. Display Toast Notification
+        const showToast = (message, type = 'info') => {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgClass = type === 'success' ? 'bg-emerald-600 text-white' : 
+                           type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white';
+            
+            toast.className = `${bgClass} px-4 py-3 rounded-xl shadow-lg text-xs font-semibold flex items-center justify-between gap-3 pointer-events-auto transition-all duration-300 transform translate-y-2 opacity-0`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button class="text-white/80 hover:text-white" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            // Auto dismiss
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        };
+
+        // 4. Calculate Subtotal Realtime
+        const updateCalculatedTotal = () => {
+            const price = parseFloat(itemPriceInput.value) || 0;
+            const quantity = parseInt(itemQuantityInput.value) || 0;
+            const subtotal = Math.max(0, price * quantity);
+            calculatedTotalEl.textContent = formatJPY(subtotal);
+        };
+
+        itemPriceInput.addEventListener('input', updateCalculatedTotal);
+        itemQuantityInput.addEventListener('input', updateCalculatedTotal);
+
+        // 5. Auth State Changed Event Handler
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                // Update User UI Info
+                userNameEl.textContent = user.displayName || 'ユーザー';
+                userEmailEl.textContent = user.email || '';
+                userAvatarEl.src = user.photoURL || `https://placehold.co/100x100/0ea5e9/ffffff?text=${encodeURIComponent(user.displayName?.[0] || 'U')}`;
+                
+                // Switch View
+                loginView.classList.add('hidden');
+                appView.classList.remove('hidden');
+                appView.classList.add('flex');
+
+                // Start Firestore Realtime Listener
+                subscribeToSalesData();
+            } else {
+                currentUser = null;
+                // Unsubscribe listener if exists
+                if (unsubscribeSnapshot) {
+                    unsubscribeSnapshot();
+                    unsubscribeSnapshot = null;
+                }
+                
+                // Switch View
+                appView.classList.add('hidden');
+                appView.classList.remove('flex');
+                loginView.classList.remove('hidden');
+            }
+        });
+
+        // Login Handler
+        googleLoginBtn.addEventListener('click', async () => {
+            try {
+                await signInWithPopup(auth, googleProvider);
+                showToast('ログインに成功しました', 'success');
+            } catch (error) {
+                console.error("Login Error:", error);
+                showToast(`ログイン失敗: ${error.message}`, 'error');
+            }
+        });
+
+        // Logout Handler
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                showToast('ログアウトしました', 'info');
+            } catch (error) {
+                console.error("Logout Error:", error);
+                showToast('ログアウトに失敗しました', 'error');
+            }
+        });
+
+        // 6. Firestore Realtime Listener (`/artifacts/{appId}/users/{userId}/sales`)
+        const subscribeToSalesData = () => {
+            if (!currentUser) return;
+
+            // MANDATORY RULE: Use strictly scoped user path
+            const salesColRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'sales');
+
+            // Listen to updates with mandatory error handling callback
+            unsubscribeSnapshot = onSnapshot(salesColRef, (snapshot) => {
+                const sales = [];
+                let grandTotal = 0;
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const subtotal = (data.price || 0) * (data.quantity || 0);
+                    grandTotal += subtotal;
+                    sales.push({
+                        id: doc.id,
+                        ...data,
+                        subtotal
+                    });
+                });
+
+                // In-memory sort by date / createdAt descending
+                sales.sort((a, b) => {
+                    if (b.date !== a.date) return b.date.localeCompare(a.date);
+                    return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
+                });
+
+                // Update Summary Cards
+                grandTotalEl.textContent = formatJPY(grandTotal);
+                recordCountEl.textContent = `${sales.length}件`;
+
+                // Render Sales List
+                renderSalesList(sales);
+            }, (error) => {
+                console.error("Firestore Listener Error:", error);
+                showToast('データの取得中にエラーが発生しました', 'error');
+            });
+        };
+
+        // 7. Render Sales List Cards
+        const renderSalesList = (sales) => {
+            // Clear existing list except empty state
+            salesListContainer.innerHTML = '';
+
+            if (sales.length === 0) {
+                salesListContainer.appendChild(emptyState);
+                return;
+            }
+
+            sales.forEach((item) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/80 p-3 rounded-xl transition border-b border-slate-100 last:border-none';
+                
+                itemEl.innerHTML = `
+                    <div class="flex-1 space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-800 text-base">${escapeHTML(item.name)}</span>
+                            <span class="text-xs font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                                ${escapeHTML(item.date)}
+                            </span>
+                        </div>
+                        <div class="text-xs text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span>単価: <strong class="text-slate-700">${formatJPY(item.price)}</strong></span>
+                            <span>個数: <strong class="text-slate-700">${item.quantity}個</strong></span>
+                            ${item.memo ? `<span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded text-[11px]"><i class="fa-regular fa-note-sticky mr-1"></i>${escapeHTML(item.memo)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
+                        <div class="text-right">
+                            <span class="text-[10px] text-slate-400 block leading-tight">小計</span>
+                            <span class="font-black text-slate-900 text-lg">${formatJPY(item.subtotal)}</span>
+                        </div>
+                        <button data-id="${item.id}" class="delete-btn text-slate-300 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition" title="データを削除">
+                            <i class="fa-solid fa-trash-can text-base"></i>
+                        </button>
+                    </div>
+                `;
+
+                // Attach delete event
+                itemEl.querySelector('.delete-btn').addEventListener('click', () => handleDeleteItem(item.id, item.name));
+                salesListContainer.appendChild(itemEl);
+            });
+        };
+
+        // Helper to prevent XSS
+        const escapeHTML = (str) => {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        };
+
+        // 8. Submit Form to Firestore
+        posForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!currentUser) {
+                showToast('ログインが必要です', 'error');
+                return;
+            }
+
+            const name = itemNameInput.value.trim();
+            const price = parseFloat(itemPriceInput.value);
+            const quantity = parseInt(itemQuantityInput.value);
+            const date = itemDateInput.value;
+            const memo = itemMemoInput.value.trim();
+
+            if (!name || isNaN(price) || isNaN(quantity) || !date) {
+                showToast('必須項目を入力してください', 'error');
+                return;
+            }
+
+            try {
+                const salesColRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'sales');
+                await addDoc(salesColRef, {
+                    name,
+                    price,
+                    quantity,
+                    date,
+                    memo,
+                    createdAt: serverTimestamp()
+                });
+
+                showToast(`「${name}」を登録しました`, 'success');
+
+                // Reset form inputs except date
+                itemNameInput.value = '';
+                itemPriceInput.value = '';
+                itemQuantityInput.value = '1';
+                itemMemoInput.value = '';
+                updateCalculatedTotal();
+                itemNameInput.focus();
+
+            } catch (error) {
+                console.error("Add Doc Error:", error);
+                showToast('登録に失敗しました', 'error');
+            }
+        });
+
+        // 9. Delete Item Handler
+        const handleDeleteItem = async (id, itemName) => {
+            if (!currentUser) return;
+
+            // Custom UI notification in place of native confirm
+            const userConfirmed = window.confirm ? confirm(`「${itemName}」のデータを削除しますか？`) : true;
+            if (!userConfirmed) return;
+
+            try {
+                const itemDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'sales', id);
+                await deleteDoc(itemDocRef);
+                showToast(`データを削除しました`, 'info');
+            } catch (error) {
+                console.error("Delete Error:", error);
+                showToast('削除に失敗しました', 'error');
+            }
+        };
+
+        // 10. Guidance Modal Control
+        const toggleModal = (show) => {
+            if (show) {
+                guideModal.classList.remove('hidden');
+            } else {
+                guideModal.classList.add('hidden');
+            }
+        };
+
+        guideModalBtn.addEventListener('click', () => toggleModal(true));
+        closeGuideModalBtn.addEventListener('click', () => toggleModal(false));
+        closeGuideModalBtn2.addEventListener('click', () => toggleModal(false));
+        
+        // Close modal on outside click
+        guideModal.addEventListener('click', (e) => {
+            if (e.target === guideModal) toggleModal(false);
+        });
+
+    </script>
 </body>
 </html>
