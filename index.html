@@ -4,14 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>POS App - レジアプリ</title>
-  <!-- Tailwind CSS (UIデザイン用) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Chart.js (売上グラフ用) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800">
 
-  <!-- 1. 未ログイン状態の画面 (ログイン画面) -->
+  <!-- 1. 未ログイン画面 -->
   <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-4">
     <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md text-center space-y-6">
       <h1 class="text-2xl font-bold text-gray-900">POS レジアプリ</h1>
@@ -28,9 +26,8 @@
     </div>
   </div>
 
-  <!-- 2. ログイン完了後のメイン画面 -->
+  <!-- 2. ログイン後画面 -->
   <div id="app-screen" class="hidden min-h-screen flex flex-col">
-    <!-- ヘッダー -->
     <header class="bg-indigo-600 text-white p-4 shadow-md flex justify-between items-center">
       <h1 class="text-xl font-bold">POS App</h1>
       <div class="flex items-center gap-3">
@@ -41,13 +38,9 @@
       </div>
     </header>
 
-    <!-- メインコンテンツ -->
     <main class="flex-1 p-4 max-w-5xl mx-auto w-full space-y-6">
-      
-      <!-- 入力エラーメッセージの表示領域 -->
       <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm"></div>
 
-      <!-- 登録フォーム -->
       <section class="bg-white p-5 rounded-xl shadow-sm space-y-4">
         <h2 class="text-lg font-bold border-b pb-2 text-gray-700">商品登録</h2>
         <form id="pos-form" class="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -72,7 +65,6 @@
             <input type="text" id="input-category" placeholder="例: 食品" class="w-full border rounded p-2 text-sm" required>
           </div>
           
-          <!-- 自動計算表示＆登録ボタン -->
           <div class="md:col-span-5 flex flex-col sm:flex-row justify-between items-center bg-gray-50 p-3 rounded mt-2 gap-3">
             <div class="text-gray-700 font-semibold">
               小計: <span id="auto-total" class="text-xl text-indigo-600 font-bold">0</span> 円
@@ -84,18 +76,13 @@
         </form>
       </section>
 
-      <!-- 日付ごとの合計金額集計 & グラフ表示 -->
       <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- 売上集計カード -->
         <div class="bg-white p-5 rounded-xl shadow-sm space-y-2 flex flex-col justify-center">
           <h3 class="text-xs font-semibold text-gray-400 uppercase">総合計売上</h3>
           <p id="total-sales" class="text-3xl font-extrabold text-indigo-600">0 円</p>
-          <div id="daily-summary" class="text-xs text-gray-500 space-y-1 max-h-32 overflow-y-auto pt-2 border-t">
-            <!-- 日別売上がここに挿入されます -->
-          </div>
+          <div id="daily-summary" class="text-xs text-gray-500 space-y-1 max-h-32 overflow-y-auto pt-2 border-t"></div>
         </div>
 
-        <!-- 売上グラフ -->
         <div class="bg-white p-5 rounded-xl shadow-sm md:col-span-2">
           <h3 class="text-sm font-bold text-gray-600 mb-2">日別売上推移</h3>
           <div class="h-40">
@@ -104,7 +91,6 @@
         </div>
       </section>
 
-      <!-- 絞り込み検索 & 登録データ一覧 -->
       <section class="bg-white p-5 rounded-xl shadow-sm space-y-4">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-3">
           <h2 class="text-lg font-bold text-gray-700">登録履歴 (自分の記録)</h2>
@@ -124,39 +110,18 @@
                 <th class="p-3 text-center">操作</th>
               </tr>
             </thead>
-            <tbody id="records-list" class="divide-y">
-              <!-- Firestoreから取得したデータがここに動的表示されます -->
-            </tbody>
+            <tbody id="records-list" class="divide-y"></tbody>
           </table>
         </div>
       </section>
     </main>
   </div>
 
-  <!-- Firebase SDK の読み込み (v10 互換モジュール) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { 
-      getAuth, 
-      GoogleAuthProvider, 
-      signInWithPopup, 
-      signOut, 
-      onAuthStateChanged 
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { 
-      getFirestore, 
-      collection, 
-      addDoc, 
-      deleteDoc, 
-      doc, 
-      onSnapshot, 
-      query, 
-      where, 
-      orderBy,
-      serverTimestamp 
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // --- Firebase 設定 (ご提示いただいたキーを使用) ---
     const firebaseConfig = {
       apiKey: "AIzaSyCAtfJp9Yj65bpmx3Qppv8__TRoStT1kpE",
       authDomain: "posapp-d3f89.firebaseapp.com",
@@ -166,13 +131,11 @@
       appId: "1:159737280029:web:d4ccdc7cb4dd669a5fb8f4"
     };
 
-    // Firebase 初期化
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
-    // DOM 要素
     const loginScreen = document.getElementById('login-screen');
     const appScreen = document.getElementById('app-screen');
     const loginBtn = document.getElementById('login-btn');
@@ -197,10 +160,8 @@
     let recordsData = [];
     let salesChart = null;
 
-    // 当日の日付をデフォルトセット
     inputDate.value = new Date().toISOString().split('T')[0];
 
-    // --- 認証機能 ---
     loginBtn.addEventListener('click', async () => {
       try {
         await signInWithPopup(auth, provider);
@@ -211,7 +172,6 @@
 
     logoutBtn.addEventListener('click', () => signOut(auth));
 
-    // ログイン状態の監視
     onAuthStateChanged(auth, (user) => {
       if (user) {
         currentUser = user;
@@ -226,7 +186,6 @@
       }
     });
 
-    // --- 単価 × 個数 の自動計算 ---
     function updateAutoTotal() {
       const price = parseFloat(inputPrice.value) || 0;
       const qty = parseInt(inputQuantity.value) || 0;
@@ -235,7 +194,6 @@
     inputPrice.addEventListener('input', updateAutoTotal);
     inputQuantity.addEventListener('input', updateAutoTotal);
 
-    // --- データ登録 ---
     posForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       hideError();
@@ -246,7 +204,6 @@
       const quantity = parseInt(inputQuantity.value);
       const category = inputCategory.value.trim();
 
-      // 未入力・数値バリデーション
       if (!date || !name || !category || isNaN(price) || isNaN(quantity)) {
         showError("全ての項目を正しく入力してください。");
         return;
@@ -268,7 +225,6 @@
           createdAt: serverTimestamp()
         });
 
-        // フォームのリセット
         inputName.value = '';
         inputPrice.value = '';
         inputQuantity.value = '';
@@ -279,11 +235,9 @@
       }
     });
 
-    // --- Firestore データのリアルタイム読み込み (ユーザー限定) ---
     function loadRecords() {
       if (!currentUser) return;
 
-      // 自分のデータのみを取得するクエリ
       const q = query(
         collection(db, "sales"),
         where("uid", "==", currentUser.uid),
@@ -301,7 +255,6 @@
       });
     }
 
-    // --- テーブル表示＆売上集計・グラフ更新 ---
     function renderRecords() {
       const filterText = searchInput.value.toLowerCase().trim();
       recordsList.innerHTML = '';
@@ -309,13 +262,11 @@
       let totalSales = 0;
       const dailyTotals = {};
 
-      // 絞り込みフィルタリング
       const filteredRecords = recordsData.filter(item => {
         return item.name.toLowerCase().includes(filterText);
       });
 
       filteredRecords.forEach(item => {
-        // テーブル行作成
         const tr = document.createElement('tr');
         tr.className = "hover:bg-gray-50 border-b";
         tr.innerHTML = `
@@ -334,16 +285,13 @@
         recordsList.appendChild(tr);
       });
 
-      // 集計処理 (フィルタリングに関わらず全所有データで集計)
       recordsData.forEach(item => {
         totalSales += item.totalPrice;
         dailyTotals[item.date] = (dailyTotals[item.date] || 0) + item.totalPrice;
       });
 
-      // 総合計更新
       totalSalesEl.textContent = `${totalSales.toLocaleString()} 円`;
 
-      // 日別集計一覧更新
       dailySummaryEl.innerHTML = '';
       const sortedDates = Object.keys(dailyTotals).sort().reverse();
       sortedDates.forEach(date => {
@@ -353,7 +301,6 @@
         dailySummaryEl.appendChild(div);
       });
 
-      // 削除ボタンのイベント付与
       document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const docId = e.target.getAttribute('data-id');
@@ -367,18 +314,14 @@
         });
       });
 
-      // グラフ更新
       updateChart(dailyTotals);
     }
 
-    // 検索入力時にテーブルをフィルタリング
     searchInput.addEventListener('input', renderRecords);
 
-    // --- 売上グラフ (Chart.js) ---
     function updateChart(dailyTotals) {
       const dates = Object.keys(dailyTotals).sort();
       const totals = dates.map(d => dailyTotals[d]);
-
       const ctx = document.getElementById('sales-chart').getContext('2d');
 
       if (salesChart) {
@@ -402,14 +345,11 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true }
-          }
+          scales: { y: { beginAtZero: true } }
         }
       });
     }
 
-    // --- 補助関数 ---
     function showError(msg) {
       errorMessage.textContent = msg;
       errorMessage.classList.remove('hidden');
